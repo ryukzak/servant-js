@@ -22,6 +22,8 @@ data AxiosOptions = AxiosOptions
   , xsrfCookieName  :: !(Maybe Text)
     -- | the name of the header to use as a value for xsrf token
   , xsrfHeaderName  :: !(Maybe Text)
+    -- | pass as the last argument cancel token with specific name
+  , withCancelTokenArg :: !(Maybe Text)
   }
 
 -- | Default instance of the AxiosOptions
@@ -32,6 +34,7 @@ defAxiosOptions = AxiosOptions
   { withCredentials = False
   , xsrfCookieName = Nothing
   , xsrfHeaderName = Nothing
+  , withCancelTokenArg = Nothing
   }
 
 -- | Generate regular javacript functions that use
@@ -59,6 +62,7 @@ generateAxiosJSWith aopts opts req = "\n" <>
  <> withCreds
  <> xsrfCookie
  <> xsrfHeader
+ <> cancelTokenPass
  <> "    });\n"
  <> "}\n"
 
@@ -70,6 +74,11 @@ generateAxiosJSWith aopts opts req = "\n" <>
                    . (<>) "header"
                    . view (headerArg . argPath)
                    ) hs
+            ++ cancelArg
+
+        cancelArg = case withCancelTokenArg aopts of
+            Just name -> [name]
+            Nothing -> []
 
         captures = map (view argPath . captureArg)
                  . filter isCapture
@@ -103,6 +112,11 @@ generateAxiosJSWith aopts opts req = "\n" <>
           case xsrfHeaderName aopts of
             Just name -> "    , xsrfHeaderName: '" <> name <> "'\n"
             Nothing   -> ""
+
+        cancelTokenPass =
+          case withCancelTokenArg aopts of
+            Just name -> "    , cancelToken: " <> name <> "\n"
+            Nothing -> ""
 
         reqheaders =
           if null hs
